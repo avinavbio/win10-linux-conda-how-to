@@ -1,267 +1,514 @@
-# win10-linux-conda-how-to
-A tutorial on how to set up a Linux environment on a computer running Windows 10. Followed by how to install and use (bio)conda.
+# WSL + Conda/Bioconda for Bioinformatics
 
-[I started this tutorial on a Twitter thread](https://twitter.com/CurtisKapsak/status/974737312155422721) but after a suggestion, decided to create a repository to document everything. This way people can comment, suggest changes, make recommendations, etc. to improve the tutorial!
+A practical guide to building a Linux-based bioinformatics environment on Windows using **WSL 2** and **Conda/Bioconda**.
 
-I've created this tutorial to help out anyone interested in doing bioinformatics analyses but they:
-  * Do not have a Mac or a computer running Linux (running natively)
-  * Do not have access to a high performance computing cluster/server/whatever you want to call it
-  * Hate VirtualBox or other similar virtual computing applications (robs your computer's resources!)
-  * Also hate setting up a functional dual-boot setup
-  * Have a computer running Windows 10, 64-bit (with a 64-bit CPU!)
-  * Want access to a Linux command line
+> **Updated for 2026:** This repository preserves the original Windows 10 tutorial, but the installation instructions below have been modernized for current WSL 2 and Bioconda workflows.
 
- ## Outline/Table of Contents
-   1. [Install Linux Subsystem on your computer running Windows 10](#step-1-install-linux-subsystem-on-your-computer-running-windows-10)
-   2. [Install your Linux Distribution of Choice](#step-2-install-your-linux-distribution-of-choice)
-   3. [Install conda into your new Linux environment using Miniconda](#step-3-install-conda-into-your-new-linux-environment-using-miniconda)
-   4. [Set up Bioconda channels in conda](#step-4-set-up-bioconda-channels-in-conda)
-   5. [Use conda to install any of the 6000+ bioinformatics tools available in the Bioconda repository](#step-5-use-conda-to-install-any-of-the-6000-bioinformatics-tools-available-in-the-bioconda-repository)
+## What this guide covers
 
+1. Install WSL 2 and Ubuntu
+2. Verify and manage WSL
+3. Set up Linux for bioinformatics
+4. Install Conda
+5. Configure Bioconda correctly
+6. Create isolated environments
+7. Install bioinformatics software
+8. Keep environments reproducible
+9. Useful WSL and Conda commands
+10. Legacy Windows 10 notes
 
-#### Why should I use (bio)conda?
-Check out the ~~pre-print~~ Nature Methods publication on bioconda here:
-[Bioconda: sustainable and comprehensive software distribution for the life sciences](https://www.nature.com/articles/s41592-018-0046-7)
+---
 
-Or the pre-print on BioRxiv:
-[Bioconda: A sustainable and comprehensive software distribution for the life sciences | bioRxiv](https://www.biorxiv.org/content/early/2017/10/27/207092)
+## Why WSL for bioinformatics?
 
-  * reproducability
-  * ease of software installation
+WSL allows Linux distributions and Linux command-line tools to run directly on Windows without a traditional virtual machine or dual-boot installation.
 
-I use it mainly because it is a solution for the mess that is installing dependencies (dependency = software needed to run other software) for bioinformatics software. This program will save you a big headache when trying to run your favorite software - quality control tools, genome assemblers, data visualization, basecallers, etc. There are lots of software out there and each will require installing a specific combination of required dependencies. Bioconda will take that headache away by essentially building a pseudo-environment for you to work in, as if every dependency were already installed (and installed correctly!!).
+For bioinformatics, this provides access to the Linux ecosystem while retaining Windows applications for tasks such as documentation, visualization, and general desktop work.
 
-Need to change from Python v.2.7 to 3.6? No problem. No need to un-install the old version of python that you installed previously, you can install the newer version right on top, and remove it (and revert to the old version) simply with one command when you're ready to. The other beautiful thing is that Bioconda works on most, if not all operating systems.
+Microsoft currently recommends WSL 2 for new installations. The `wsl --install` command can install the required components and Ubuntu on supported Windows versions. [Microsoft WSL documentation](https://learn.microsoft.com/en-us/windows/wsl/install) provides the current requirements and options.
 
+---
 
-### PC Requirements
-  * x64 based processor, AKA 64-bit processor (check by going to **Settings** -> **System** -> **About** -> **Device Specifications** -> **System type**)
-  * Windows 10 build version 16215 or later. [How to check your build](https://docs.microsoft.com/en-us/windows/wsl/troubleshooting#check-your-build-number)
-    * Run Windows Update, and that should bring your OS to the most recent build version.
-    * [It is possible to use an earlier build of Win10, but I've not tried this before.](https://docs.microsoft.com/en-us/windows/wsl/install-win10#for-anniversary-update-and-creators-update-install-using-lxrun)
-  * Storage space - at least 2 GB for basic installation, + space for your data and additional programs
-    * For Miniconda—400 MB disk space is required
-  * CPU/RAM - you'd likely be OK with a 2 core CPU and maybe 4GB RAM, but the more core's and RAM, the better. My computer has 4-core CPU (i5 Intel) and 8GB of RAM, and it runs just fine. The nice thing about this setup is that the Linux subsystem runs natively and has access to all of your computers resources (unlike Virtualbox, which robs your system's resources just to run)
+# 1. Install WSL 2
 
-### General Resources
-  * [Microsoft's documentation on the Windows 10 Linux subsystem](https://docs.microsoft.com/en-us/windows/wsl/about)
-  * [FAQ's about the Windows 10 Linux subsystem](https://docs.microsoft.com/en-us/windows/wsl/faq)
-  * [What's the difference between conda, anaconda, and miniconda?](https://bioconda.github.io/faqs.html#conda-anaconda-minconda)
-  * [Bioconda: sustainable and comprehensive software distribution for the life sciences](https://www.nature.com/articles/s41592-018-0046-7)
-  * [Using Bioconda -- Bioconda documentation](https://bioconda.github.io/)
-  * [Managing conda environments](https://conda.io/docs/user-guide/tasks/manage-environments.html)
-  * [WARNING from Microsoft: Do not change Linux files using Windows apps and tools](https://blogs.msdn.microsoft.com/commandline/2016/11/17/do-not-change-linux-files-using-windows-apps-and-tools/)
+### Recommended method
 
+Open **PowerShell as Administrator** and run:
 
-
-
-## Step 1. Install Linux Subsystem on your computer running Windows 10
-The first step is to install the Linux Subsystem into your Windows 10 OS. I've copied and modified the bulk of these instructions (and a few images) from Microsoft's documentation found here: https://docs.microsoft.com/en-us/windows/wsl/install-win10 . Thanks to the folks at Microsoft for putting together this documentation and making it publicly available on github!
-
-Enable the "Windows Subsystem for Linux" optional feature and reboot.
-
-1. Open PowerShell as Administrator and run:
-    ``` PowerShell
-    Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
-    ```
-
-2. Restart your computer when prompted.
-
-## Step 2. Install your Linux Distribution of Choice
-### Fall Creators Update (Win10 build 16215) and later: Install from the Microsoft Store
-
-> This section is for Windows build 16215 or later.  Follow these steps to [check your build](https://docs.microsoft.com/en-us/windows/wsl/troubleshooting#check-your-build-number).  For earlier versions of Windows 10, follow [these instructions using lxrun](https://docs.microsoft.com/en-us/windows/wsl/install-win10#for-anniversary-update-and-creators-update-install-using-lxrun).
-
-1. Open the Microsoft Store and choose your favorite Linux distribution. I use **Ubuntu**, because it comes pre-loaded with everything needed to install conda (for example python 3.5), but most distributions should be OK.
-
-If you use a distribution other than Ubuntu, ensure that it has the following programs installed:
-  * Python 2.7, 3.4, 3.5 or 3.6
-  * pycosat
-  * PyYaml
-  * Requests
-
-    Here are links directly to the store installers:
-    * [Ubuntu](https://www.microsoft.com/store/p/ubuntu/9nblggh4msv6)
-    * [OpenSUSE](https://www.microsoft.com/store/apps/9njvjts82tjx)
-    * [SLES](https://www.microsoft.com/store/apps/9p32mwbh6cns)
-    * [Kali Linux](https://www.microsoft.com/store/apps/9PKR34TNCV07)
-    * [Debian GNU/Linux](https://www.microsoft.com/store/apps/9MSVKQC78PK6)
-
-    ![](UbuntuStore.png)
-
-2. Select "Get"
-
-    > **Troubleshooting: Installation failed with error 0x80070003**
-    > The Windows Subsystem for Linux only runs on your system drive (usually this is your C: drive).  Make sure that new apps are stored on your system drive.
-    > Open **Settings** -> **Storage** -> **More Storage Settings: Change where new content is saved**
-    > ![](AppStorage.png)
-
-3. Once the download has completed, select "Launch".
-    This will open a console window.  Wait for installation to complete then you will be prompted to create your LINUX user account.
-    ![](UbuntuInstall.png)
-
-    > **Troubleshooting: Installation failed with error 0x8007007e**
-    > This error occurs when your system doesn't support Linux from the store.  Make sure that:
-    > * You're running Windows build 16215 or later. [Check your build](https://docs.microsoft.com/en-us/windows/wsl/troubleshooting#check-your-build-number).
-    > * The Windows Subsystem for Linux optional component is enabled and the computer has restarted.  [Make sure WSL is enabled](https://docs.microsoft.com/en-us/windows/wsl/troubleshooting#confirm-wsl-is-enabled).
-
-
-
-5. Create your LINUX username and password.  This user account has no relationship to your Windows username and password and hence can be different. [Read more](https://docs.microsoft.com/en-us/windows/wsl/user-support).
-
-You're done!  Now you can use your Linux environment.
-
-#### !!Warning about editing linux files using Windows apps and tools!!
-I highly recommend that you scan through this before proceeding. Basically don't mess with any of the linux files using Windows apps or tools. https://blogs.msdn.microsoft.com/commandline/2016/11/17/do-not-change-linux-files-using-windows-apps-and-tools/
-
-You can access your computer's storage drives in the directory `/mnt/[name of your drive]` usually`/mnt/c` or `/mnt/d` for saving files there and if you would like to access them from your Linux command line.
-
-## Step 3. Install conda into your new Linux environment using Miniconda
-The bulk of these directions were copied and modified from here: https://conda.io/docs/user-guide/install/linux.html
-
-### Linux Environment Requirements
-  * Python 2.7, 3.4, 3.5 or 3.6
-  * pycosat
-  * PyYaml
-  * Requests
-    * The Ubuntu distribution available through Microsoft store is 16.04 LTS, comes pre-loaded with these (python 3.5.1). If your distribution doesn't have these, running `sudo apt upgrade` or `sudo apt-get upgrade` may install them.
-
-You'll need to download the correct version of Miniconda (miniconda = conda installer) dependent upon which version of python is installed into your linux environment. Check by running `which python`, `python --version`, or `python3 --version`. Here's the list of all Miniconda installers. https://conda.io/miniconda.html
-
-You'll want the "Linux 64-bit" installer, for the correct version of python that is installed into your Linux environment.
-
-1. Open your newly created Linux environment and download the miniconda installer bash script by entering the following in the terminal (this command is for the Linux 64-bit python 3.5/3.6 script):
+```powershell
+wsl --install
 ```
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+Restart Windows if prompted.
+
+The default installation includes Ubuntu. To see available distributions:
+
+```powershell
+wsl --list --online
 ```
-2. Run the bash script:
+
+To install a specific distribution:
+
+```powershell
+wsl --install -d Ubuntu
 ```
+
+For supported Windows versions, Microsoft states that `wsl --install` enables the required components, installs the Linux kernel, sets WSL 2 as the default, and installs Ubuntu. [Microsoft](https://learn.microsoft.com/en-us/windows/wsl/install)
+
+### Check your WSL installation
+
+```powershell
+wsl --status
+wsl --version
+wsl --list --verbose
+```
+
+A typical installation should show your distribution using **WSL 2**.
+
+If necessary:
+
+```powershell
+wsl --set-version Ubuntu 2
+```
+
+Set WSL 2 as the default for future distributions:
+
+```powershell
+wsl --set-default-version 2
+```
+
+---
+
+# 2. Start Ubuntu
+
+Launch **Ubuntu** from the Windows Start menu, or use:
+
+```powershell
+wsl
+```
+
+The first launch asks you to create a Linux username and password.
+
+These credentials are separate from your Windows account.
+
+Update the Linux system:
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+Useful basic commands:
+
+```bash
+pwd
+ls
+cd
+mkdir
+cp
+mv
+rm
+```
+
+---
+
+# 3. Working with Windows files
+
+Windows drives are normally accessible inside WSL under `/mnt`.
+
+For example:
+
+```bash
+/mnt/c
+/mnt/d
+```
+
+For bioinformatics projects, it is generally preferable to keep Linux-heavy working files inside the WSL Linux filesystem rather than repeatedly processing large datasets through mounted Windows paths.
+
+Microsoft's WSL guidance also provides recommendations for file storage and development workflows:
+
+https://learn.microsoft.com/en-us/windows/wsl/setup/environment
+
+---
+
+# 4. Install Conda
+
+Conda creates isolated environments so different bioinformatics projects can use different software and dependency versions.
+
+## Option A — Miniconda
+
+Download the current Linux x86_64 installer from the official Miniconda documentation:
+
+https://www.anaconda.com/docs/getting-started/miniconda/install
+
+For example, after downloading the current installer:
+
+```bash
 bash Miniconda3-latest-Linux-x86_64.sh
 ```
-3. Follow the commands as prompted by the conda installer. You can accept the defaults, and change them later if you want.
-4. To make the changes take effect, run the following command in your terminal:
+
+Follow the installer prompts.
+
+Then reload your shell:
+
 ```bash
 source ~/.bashrc
 ```
-5. Test your installation by running:
+
+Check the installation:
+
+```bash
+conda --version
+conda info
+```
+
+> **Do not use the old `repo.continuum.io/miniconda` command from the original version of this tutorial.** The original repository predates the current Miniconda installation workflow.
+
+## Alternative: Miniforge
+
+Miniforge is another lightweight option, particularly useful for workflows centered on conda-forge. Bioconda's documentation discusses Miniforge and other conda-compatible approaches.
+
+---
+
+# 5. Configure Bioconda
+
+The Bioconda channel configuration has changed since this repository was originally written.
+
+### Current recommended Conda configuration
+
+Run:
+
+```bash
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+```
+
+Bioconda currently recommends **conda-forge + bioconda with strict channel priority** and no longer recommends adding `defaults` for the standard Bioconda setup. [Bioconda documentation](https://bioconda.github.io/)
+
+Check your configuration:
+
+```bash
+conda config --show channels
+conda config --show channel_priority
+```
+
+---
+
+# 6. Create an environment
+
+Avoid installing every bioinformatics program into the base environment.
+
+Instead, create an environment for a project or workflow.
+
+Example:
+
+```bash
+conda create -n bioinfo python=3.11
+conda activate bioinfo
+```
+
+Install packages into the environment:
+
+```bash
+conda install pandas numpy matplotlib
+```
+
+For bioinformatics tools:
+
+```bash
+conda create -n ngs fastqc multiqc bwa samtools
+conda activate ngs
+```
+
+You can also create an environment directly with the required channels:
+
+```bash
+conda create -n ngs fastqc multiqc bwa samtools \
+  --channel conda-forge \
+  --channel bioconda \
+  --strict-channel-priority
+```
+
+---
+
+# 7. Example: Installing common bioinformatics tools
+
+### FastQC
+
+```bash
+conda install fastqc
+fastqc --version
+```
+
+### BWA
+
+```bash
+conda install bwa
+bwa
+```
+
+### Samtools
+
+```bash
+conda install samtools
+samtools --version
+```
+
+### MultiQC
+
+```bash
+conda install multiqc
+multiqc --version
+```
+
+### STAR
+
+```bash
+conda install star
+STAR --version
+```
+
+The exact package availability and versions change over time, so check the current Bioconda package index when choosing software.
+
+---
+
+# 8. Reproducible environments
+
+One of Conda's major advantages is the ability to export an environment.
+
+Export:
+
+```bash
+conda env export > environment.yml
+```
+
+A more portable approach is to export the explicitly requested packages:
+
+```bash
+conda env export --from-history > environment.yml
+```
+
+Recreate the environment:
+
+```bash
+conda env create -f environment.yml
+```
+
+List environments:
+
+```bash
+conda env list
+```
+
+Remove an environment:
+
+```bash
+conda env remove -n myenvironment
+```
+
+For reproducible research, keep the `environment.yml` file with the project code whenever practical.
+
+---
+
+# 9. Useful Conda commands
+
+### Create an environment
+
+```bash
+conda create -n myenv
+```
+
+### Create an environment with a Python version
+
+```bash
+conda create -n py311 python=3.11
+```
+
+### Activate
+
+```bash
+conda activate myenv
+```
+
+### Deactivate
+
+```bash
+conda deactivate
+```
+
+### List environments
+
+```bash
+conda env list
+```
+
+### List installed packages
+
 ```bash
 conda list
 ```
-For a successful installation, a list of installed packages appears.
 
-If the error `bash: conda: command not found`, run the following code in your terminal:
+### Search packages
 
 ```bash
-echo 'export PATH="$HOME/miniconda3/bin:$PATH"' >> $HOME/.bashrc
-source $HOME/.bashrc
+conda search samtools
 ```
 
-*Note: miniconda3 is the default folder where Miniconda is installed. This name could change in the future. If that is the case, replace miniconda3 with the name of the folder Miniconda is installed in.*
+### Install a package
 
-## Step 4. Set up Bioconda channels in conda
-The bulk of these instructions were copied and modified from here: https://bioconda.github.io/#using-bioconda
-
-1.  Run the following three commands from the terminal (IN THIS ORDER!!!)
-```
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
-```
-You should see a warning message after running the first command, but that is OK, simply proceed with the three commands. You will not see any message or output after entering the third command. That is OK, it just means that there is no output to the terminal.
-
-## Step 5. Use conda to install any of the 6000+ bioinformatics tools available in the Bioconda repository
-Some examples of tools available on Bioconda's Repository. Just try searching for you favorite tools here: https://bioconda.github.io/conda-recipe_index.html:
-  * fastqc - A quality control tool for high throughput sequence data
-  * SPAdes - An assembly toolkit containing various assembly pipelines
-  * bwa - The BWA read mapper
-  * samtools - Tools for dealing with SAM, BAM and CRAM files
-  * bamtools - C++ API and command-line toolkit for working with BAM data
-  * bedtools - a swiss army knife for genome arithmetic
-  * poretools - toolkit for extracting fastq data and producing run QC figures and statistics
-  * unicycler - de novo assembler used for hybrid short and long read assemblies
-  * abricate - mass screening of contigs for antibiotic resistance genes
-  * bamtools - C++ API and command-line toolkit for working with BAM data
-  * bedtools - a swiss army knife for genome arithmetic
-  * and many, many more
-
-I'm going to demonstrate this using the bacterial de novo genome assembly tool, Unicycler, as an example but feel free to try it out with any of the tools listed in the bioconda repository: https://bioconda.github.io/conda-recipe_index.html
-
-1. Create an environment for Unicycler, by running the following at the terminal:
-```
-conda create --name unicyclerEnvironment
-```
-Now there is a new "environment" created for running unicycler. It currently is empty and has almost nothing installed in the environment, but that will come in a second. I'll use this to specify the versions of all the dependencies I need installed.
-
-2. Now activate the environment with:
-```
-conda activate unicyclerEnvironment
+```bash
+conda install samtools
 ```
 
-You will now see `(unicyclerEnvironment)` in parenthesis show up prior to the normal ``user@host~:`` tag that is shown at the terminal before you type anything. This means that you are currently working in the environment that you created, running the versions of software that were installed with your program of interest.
+### Remove a package
 
-3. Install Unicycler and all of its dependencies :) into the current environment using:
-```
-(unicyclerEnvironment) user@host~:$ conda install unicycler
-```
-
-4. Check the list of programs installed by using:
-```
-(unicyclerEnvironment) user@host~:$ conda list
-```
-You can also run this same command from your root environment, but with different syntax:
-```
-conda list -n unicyclerEnvironment
-```
-You should see a list of all dependencies that are installed into the specific environment that you are working in. There are many ways to change and manipulate this list. See the one liners below.
-
-5. Most programs have a short command used to check the installation, either by running `programName --version` or `programname --help` or sometimes even simply `programName`. In the case of Unicycler, Run the following:
-```
-(unicyclerEnvironment) user@host~:$ unicycler --help
-```
-6. When you would like to leave the unicyclerEnvironment and return to the root environment, use the following command:
-```
-(unicyclerEnvironment) user@host~:$ conda deactivate
-```
-You can combine many of the above steps with simple one-liner! This is actually the **preferred route**, because you can install multiple tools at once, and ensure that conda installs compatible dependencies.
-```
-conda create -n spadesEnv spades=3.11.1 bwa samtools fastqc
+```bash
+conda remove samtools
 ```
 
+### Update Conda
 
-### Useful conda one-liners (with `mynewenvironment` as an example). I pulled most of these from here: https://conda.io/docs/user-guide/tasks/manage-environments.html
-- Create new conda environment
-```
-conda create -n mynewenvironment
-```
-- Activate environment (start working within the environment)
-```
-conda activate mynewenvironment
-```
-- Deactivate environment (leave environment)
-```
-(mynewenvironment} user@host~:$ conda deactivate
-```
-- Add a package to an existing environment, for example scipy
-```
-conda install -n mynewenvironment scipy
-```
-- Add a package to an existing environment with a specific version, like scipy 0.15.0
-```
-conda install -n mynewenvironment scipy=0.15.0
-```
-- List all environments that have been created by the user
-```
-conda info --envs
-```
-- List all packages currently installed into the environment
-```
-(mynewenvironment) user@host~:$ conda list
-```
-- Remove a conda environment and all of its installed packages
-```
-conda remove --name mynewenvironment --all
+```bash
+conda update -n base conda
 ```
 
-## Bonus Goodies
-  * [How to change the font and window colors so that your eyes don't bleed from Microsoft's awful choice of default colors](https://medium.com/@jgarijogarde/make-bash-on-ubuntu-on-windows-10-look-like-the-ubuntu-terminal-f7566008c5c2)
-  *
+---
+
+# 10. Common WSL commands
+
+From PowerShell:
+
+```powershell
+wsl --list --verbose
+wsl --shutdown
+wsl --update
+wsl --status
+```
+
+Open a specific distribution:
+
+```powershell
+wsl --distribution Ubuntu
+```
+
+Set the default distribution:
+
+```powershell
+wsl --set-default Ubuntu
+```
+
+Microsoft maintains the current WSL command reference here:
+
+https://learn.microsoft.com/en-us/windows/wsl/basic-commands
+
+---
+
+# 11. Troubleshooting
+
+## `conda: command not found`
+
+First try:
+
+```bash
+source ~/.bashrc
+```
+
+Then:
+
+```bash
+conda --version
+```
+
+If Conda was installed but the shell was not initialized:
+
+```bash
+~/miniconda3/bin/conda init bash
+source ~/.bashrc
+```
+
+If you installed Conda somewhere else, replace the path accordingly.
+
+## WSL distribution will not start
+
+Check:
+
+```powershell
+wsl --list --verbose
+wsl --status
+wsl --update
+```
+
+Then restart WSL:
+
+```powershell
+wsl --shutdown
+```
+
+and launch Ubuntu again.
+
+For installation-specific problems, consult Microsoft's current WSL troubleshooting documentation.
+
+---
+
+# 12. Original tutorial and historical notes
+
+This repository originally documented a **Windows 10 + WSL 1 + Miniconda/Bioconda** workflow.
+
+The original guide was useful for its time, but several assumptions are now obsolete:
+
+- Windows 10 build 16215 is no longer the current baseline.
+- WSL 2 is now the normal choice for new installations.
+- The Microsoft Store installation workflow has changed.
+- Python 2.7, 3.4, 3.5 and 3.6 should not be presented as general requirements for modern Conda.
+- The old `repo.continuum.io` Miniconda URL should not be used.
+- Bioconda's recommended channel configuration has changed.
+- The old `defaults + bioconda + conda-forge` configuration should be replaced with the current Bioconda recommendation.
+
+The original images and historical material remain in this repository for reference.
+
+---
+
+# 13. Recommended bioinformatics workflow
+
+A clean project can follow this pattern:
+
+```text
+project/
+├── README.md
+├── data/
+├── results/
+├── scripts/
+├── notebooks/
+├── environment.yml
+└── docs/
+```
+
+Create the environment:
+
+```bash
+conda env create -f environment.yml
+conda activate <environment-name>
+```
+
+Keep raw data, analysis scripts, results, and software dependencies clearly separated.
+
+---
+
+## References
+
+- [Microsoft — Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
+- [Microsoft — WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment)
+- [Microsoft — Basic WSL commands](https://learn.microsoft.com/en-us/windows/wsl/basic-commands)
+- [Bioconda — Usage](https://bioconda.github.io/)
+- [Bioconda — FAQs](https://bioconda.github.io/faqs.html)
+- [Anaconda — Miniconda installation](https://www.anaconda.com/docs/getting-started/miniconda/install)
+- [Bioconda publication — Nature Methods](https://www.nature.com/articles/s41592-018-0046-7)
+
+---
+
+### License
+
+This repository contains an educational guide and historical documentation. See [LICENSE](LICENSE) for the repository license.
+
+> **Bioinformatics on Windows, powered by Linux.**
